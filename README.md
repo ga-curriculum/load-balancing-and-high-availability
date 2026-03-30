@@ -40,17 +40,11 @@ Maintaining continuous **uptime** is critical for AI service delivery. We will e
 
 ### Core Concepts
 
-* **High Availability (HA):** 
-  
+* **High Availability (HA):**
   An architecture design that ensures a system operates continuously without failing for a designated period. 
-  
-  In an AI context, if an instance processing a computationally heavy machine learning model fails, a backup instance takes over instantly to prevent service disruption.
-
-
-* **Load Balancing:** 
-  
+  In an AI context, if an instance processing a computationally heavy machine learning model fails, a backup instance takes over instantly to prevent service disruption. OOMKill (Out of Memory) is a common HA failure mode for AI workloads due to variable inference memory requirements.
+* **Load Balancing:**
   The method of distributing incoming network traffic across a group of backend servers or nodes. This prevents any single node from being overwhelmed, which is especially important for latency-sensitive AI inferences.
-
 
 ### The Supermarket Checkout Analogy
 
@@ -61,27 +55,17 @@ Imagine a busy supermarket on a holiday weekend. Customers are continuously walk
 If all customers tried to use a single cash register, the line would stretch to the back of the store, and people would abandon their carts (timeout errors). To prevent this, the Floor Manager (the **Load Balancer**) stands at the front. As each customer arrives, the manager points them to the register with the shortest line. This ensures the work is distributed evenly across all cashiers, preventing any single person from being overwhelmed.
 
 **High Availability is the Backup Plan**
+
 What happens if Cashier #2 suddenly gets sick and has to close their lane? In a standard setup, the customers in that line are stuck. In a **High Availability (HA)** setup, the supermarket is prepared for failure. The manager immediately redirects the affected customers to the other open registers, and a backup cashier in the breakroom is instantly paged to take over Register #2. The store never stops checking people out, and the overall system survives the failure without closing the doors.
 
 ### The Technical Translation for AI Systems
 
 When we apply these concepts to AI infrastructures:
 
-* **Customers:** 
-  
-  Incoming user requests (e.g., asking an AI to generate an image or summarize text).
-
-* **Cashiers:**
-  
-  Your AI worker nodes or Kubernetes Pods running the heavy machine learning models.
-
-* **Floor Manager:** 
-  
-  The Load Balancer (like an AWS Application Load Balancer or Kubernetes Service) routing network traffic.
-
-* **The Breakroom Backup:** 
-  
-  Automated orchestration (like Kubernetes ReplicaSets) spinning up replacement containers instantly when a failure is detected.
+* **Customers:** Incoming user requests (e.g., asking an AI to generate an image or summarize text).
+* **Cashiers:** Your AI worker nodes or Kubernetes Pods running the heavy machine learning models.
+* **Floor Manager:** The Load Balancer (like an AWS Application Load Balancer or Kubernetes Service) routing network traffic.
+* **The Breakroom Backup:** Automated orchestration (like Kubernetes ReplicaSets) spinning up replacement containers instantly when a failure is detected.
 
 ### Architecture Diagram
 
@@ -124,10 +108,9 @@ graph TD
 
 > By combining these two strategies, you ensure your AI applications can handle massive spikes in user traffic (Load Balancing) while remaining resilient against inevitable hardware or software crashes (High Availability).
 
-
 ### Tools Used: Kubernetes Concepts
 
-While we will deploy these practically in the next section, **Kubernetes** provides the foundational tools to understand these concepts. It manages "ReplicaSets" to ensure high availability, automatically replacing failed containers. 
+While we will deploy these practically in the next section, **Kubernetes** provides the foundational tools to understand these concepts. It manages "ReplicaSets" to ensure high availability, automatically replacing failed containers.
 
 In Kubernetes, the **ReplicaSet** has a sole purpose to constantly monitor your cluster and ensure that a specified number of identical Pods (your AI models or applications) are running at all times. It provides "self-healing" by automatically replacing Pods that crash, get deleted, or are terminated due to node failures.
 
@@ -157,26 +140,7 @@ spec:
 ```
 
 > [!NOTE]
-> In modern Kubernetes, you rarely create a ReplicaSet directly. Instead, you create a **Deployment** (which we discussed in previous modules), and the Deployment automatically creates and manages the ReplicaSet for you!*
-
-
-### Practical Example
-Imagine an AI image generation API. Without load balancing, 500 concurrent users hitting a single server will cause the GPU memory to overflow, resulting in a crash. By utilizing high availability concepts, those 500 requests are distributed evenly across 10 redundant servers, ensuring continuous AI service delivery.
-
-```mermaid
-graph TD
-    Client((User Request)) --> LB[Load Balancer]
-    LB -->|Routes to least busy| NodeA[AI Server A: Active]
-    LB -->|Routes to least busy| NodeB[AI Server B: Active]
-    LB -->|Routes to least busy| NodeC[AI Server C: Active]
-    
-    subgraph High Availability Zone
-    NodeA
-    NodeB
-    NodeC
-    end
-
-```
+> In modern Kubernetes, you rarely create a ReplicaSet directly. Instead, you create a **Deployment** (which we discussed in previous modules), and the Deployment automatically creates and manages the ReplicaSet for you!
 
 ---
 
@@ -186,13 +150,22 @@ To put theory into practice, you must implement basic load balancing for distrib
 
 ### Tools Used: Minikube and Kubernetes Services
 
-* **Kubernetes (`Service` Object):** 
-  
-  In Kubernetes, load balancing is achieved by defining a `Service`. A service of type `LoadBalancer` automatically provisions a routing mechanism to distribute requests among the Pods it targets.
+* **Kubernetes (`Service` Object):** In Kubernetes, load balancing is achieved by defining a `Service`. A service of type `LoadBalancer` automatically provisions a routing mechanism to distribute requests among the Pods it targets. 
+* **Minikube Tunnel:** Minikube is used to run a local Kubernetes cluster. Cloud providers allocate IPs automatically, but local Minikube requires a tunnel process to simulate this. The `minikube tunnel` command is required to assign an external IP address for local testing; without it, the service will remain stuck in a `<pending>` state.
 
-* **Minikube:** 
-  
-  Minikube is used to run a local Kubernetes cluster. It provides a command, `minikube tunnel`, which simulates an external load balancer's IP address for local testing.
+### Service Types in Kubernetes
+
+To understand how network traffic is routed, here is a comparison of the different Service types:
+
+| Type             | Reachable from                | Use case                                             |
+|------------------|-------------------------------|------------------------------------------------------|
+| **ClusterIP**    | Inside cluster only           | Internal microservice-to-microservice communication. |
+| **NodePort**     | Node IP + port                | Local dev/testing (used in previous labs).           |
+| **LoadBalancer** | External IP (cloud or tunnel) | Production external exposure for routing traffic.    |
+
+### Safeguarding Availability: PodDisruptionBudgets (PDB)
+
+While ReplicaSets handle *involuntary* disruptions (like a hardware failure or an OOMKill), a **PodDisruptionBudget (PDB)** defines the minimum number of pods that must remain available during *voluntary* disruptions (such as node drains or planned cluster upgrades). This complementary mechanism ensures that routine maintenance never accidentally takes your AI service offline.
 
 ### Practical Example
 
@@ -274,15 +247,28 @@ sequenceDiagram
 
 **Objective:** Kubernetes Cluster Deployment – Deploy and scale a service using Minikube and Kubernetes. This lab demonstrates orchestration fundamentals and how workloads are managed dynamically.
 
-*(Please refer to the lab platform for complete instructions, starter code, and access to Minikube).*
+**Lab Tasks:**
+1. Define and deploy a `LoadBalancer` Service to expose your AI application, utilizing `minikube tunnel` to resolve pending external IPs.
+2. Write a `PodDisruptionBudget` YAML to maintain minimum availability during voluntary disruptions.
+3. Simulate an involuntary pod crash and extract forensic logs using the `kubectl logs --previous` command.
+
+> [!NOTE]
+>
+> [Lab: **Kubernetes Cluster Deployment**](https://git.generalassemb.ly/ai-systems-engineering-reliability/lab-11-kubernetes-cluster-deployment)
+> 
+> **Note**: Please refer to the dedicated [Lab Guide](https://git.generalassemb.ly/ai-systems-engineering-reliability/lab-11-kubernetes-cluster-deployment)
+ for full instructions, architectural constraints, and deliverables.
+
 
 ---
 
 ## 5. Wrap-Up and Reflection
 
-**Reflection Question:**
+**Reflection Questions:**
 
-When an AI application takes significantly longer to process certain inputs (like large images) compared to others, how does this affect the efficiency of a simple "round-robin" load balancer, and what might you look for in the system logs to diagnose this issue?
+1. When an AI application takes significantly longer to process certain inputs (like large images) compared to others, how does this affect the efficiency of a simple "round-robin" load balancer, and what might you look for in the system logs to diagnose this issue?
+2. Why does Kubernetes wait for the readiness probe to pass before routing traffic to a new pod, rather than routing traffic immediately and letting errors self-resolve?
+3. How does a PodDisruptionBudget protect availability during voluntary disruptions such as cluster upgrades, and how is it different from a ReplicaSet?
 
 ---
 

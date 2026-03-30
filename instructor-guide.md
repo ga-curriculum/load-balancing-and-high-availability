@@ -12,8 +12,6 @@ By the end of this session, learners will be able to:
 * Implement basic load balancing for distributed AI applications.
 * Analyse system logs to verify performance under load and failover conditions.
 
-
-
 ## Session Pacing Guide (120 Minutes total)
 
 | Duration   | Segment                                | Instructor Action                                                                                                                                                                                          |
@@ -33,9 +31,8 @@ By the end of this session, learners will be able to:
 
 ### 2. High Availability Mindset
 
-* **Expect Failure:** Teach the "Chaos Engineering" mindset. Hardware fails, and nodes crash. High Availability isn't about preventing failure; it's about designing a system that survives it gracefully.
-
-
+* **Expect Failure:** Teach the mindset: expect failure and design for it. Hardware fails, and nodes crash. High Availability isn't about preventing failure; it's about designing a system that survives it gracefully.
+* **Forensic Demonstration:** During the live demo, manually delete a pod, wait for the replacement to start, then show both `kubectl logs <new-pod>` and `kubectl logs --previous <new-pod>` side by side to make the difference concrete.
 
 ```mermaid
 graph TD
@@ -51,25 +48,22 @@ graph TD
 
 ## Common Student Issues & Solutions
 
-| Issue                                                                                                                            | Potential Cause                                                                                      | Solution                                                                                                                                |
-|----------------------------------------------------------------------------------------------------------------------------------|------------------------------------------------------------------------------------------------------|-----------------------------------------------------------------------------------------------------------------------------------------|
-| **External IP is `<pending>**`                                                                                                   | Kubernetes is waiting for a cloud provider to assign an IP, but the lab is running Minikube locally. |
-| Instruct the student to open a separate terminal and run `minikube tunnel` to simulate the external load balancer IP allocation. |
-| **Connection Refused**                                                                                                           | The `targetPort` in the Service YAML doesn't match the port the AI container is listening on.        | Verify the container's exposed port (e.g., FastAPI on 8000) and update the `targetPort` accordingly in the configuration.               |
-| **Cannot find logs after crash**                                                                                                 | The pod was deleted or restarted, and a standard `kubectl logs` command fails.                       | Teach learners to use the `--previous` flag (`kubectl logs -p <pod_name>`) to view logs of a crashed container before it was restarted. |
-| **Traffic hitting only one pod**                                                                                                 | Test requests are too infrequent to trigger round-robin routing clearly.                             | Use a load testing tool or a fast `while` loop with `curl` to generate enough continuous traffic to observe the distribution.           |
+| Issue                            | Potential Cause                                                                                      | Solution                                                                                                                                |
+|----------------------------------|------------------------------------------------------------------------------------------------------|-----------------------------------------------------------------------------------------------------------------------------------------|
+| **External IP is `<pending>`**   | Kubernetes is waiting for a cloud provider to assign an IP, but the lab is running Minikube locally. | Instruct the student to open a separate terminal and run `minikube tunnel` to simulate the external load balancer IP allocation.        |
+| **Connection Refused**           | The `targetPort` in the Service YAML doesn't match the port the AI container is listening on.        | Verify the container's exposed port (e.g., FastAPI on 8000) and update the `targetPort` accordingly in the configuration.               |
+| **Cannot find logs after crash** | The pod was deleted or restarted, and a standard `kubectl logs` command fails.                       | Teach learners to use the `--previous` flag (`kubectl logs -p <pod_name>`) to view logs of a crashed container before it was restarted. |
+| **Traffic hitting only one pod** | Test requests are too infrequent to trigger round-robin routing clearly.                             | Use a load testing tool or a fast `while` loop with `curl` to generate enough continuous traffic to observe the distribution.           |
 
 ---
 
 ## Debrief Questions
 
-1. "During the Kubernetes Cluster Deployment lab, how did Minikube and Kubernetes dynamically manage the workloads when you scaled the deployment up?" 
-
-
-2. "Why is analyzing system logs critical immediately *after* a failover event occurs?" 
-
-
+1. "During the Kubernetes Cluster Deployment lab, how did Minikube and Kubernetes dynamically manage the workloads when you scaled the deployment up?"
+2. "Why is analyzing system logs critical immediately *after* a failover event occurs?"
 3. "If a load balancer distributes traffic evenly, what happens if one AI model replica takes 1 second to infer, but another takes 15 seconds due to a complex prompt?"
+4. "Why does Kubernetes wait for the readiness probe to pass before routing traffic to a new pod, rather than routing traffic immediately and letting errors self-resolve?"
+5. "How does a PodDisruptionBudget protect availability during voluntary disruptions such as cluster upgrades, and how is it different from a ReplicaSet?"
 
 ---
 
