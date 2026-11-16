@@ -254,9 +254,9 @@ sequenceDiagram
 
 > [!NOTE]
 >
-> [Lab: **Kubernetes Cluster Deployment**](https://git.generalassemb.ly/ai-systems-engineering-reliability/lab-11-kubernetes-cluster-deployment)
+> [Lab: **Kubernetes Cluster Deployment**](https://github.com/ga-curriculum/lab-11-kubernetes-cluster-deployment)
 > 
-> **Note**: Please refer to the dedicated [Lab Guide](https://git.generalassemb.ly/ai-systems-engineering-reliability/lab-11-kubernetes-cluster-deployment)
+> **Note**: Please refer to the dedicated [Lab Guide](https://github.com/ga-curriculum/lab-11-kubernetes-cluster-deployment)
  for full instructions, architectural constraints, and deliverables.
 
 
